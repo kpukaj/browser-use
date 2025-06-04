@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, create_model
 from uuid_extensions import uuid7str
 
 from browser_use.agent.message_manager.views import MessageManagerState
+from browser_use.browser import BrowserProfile
 from browser_use.browser.views import BrowserStateHistory
 from browser_use.controller.registry.views import ActionModel
 from browser_use.dom.history_tree_processor.service import (
@@ -266,37 +267,28 @@ class AgentHistoryList(BaseModel):
 		except Exception as e:
 			raise e
 
-	# def save_as_playwright_script(
-	# 	self,
-	# 	output_path: str | Path,
-	# 	sensitive_data_keys: list[str] | None = None,
-	# 	browser_config: BrowserConfig | None = None,
-	# 	context_config: BrowserContextConfig | None = None,
-	# ) -> None:
-	# 	"""
-	# 	Generates a Playwright script based on the agent's history and saves it to a file.
-	# 	Args:
-	# 		output_path: The path where the generated Python script will be saved.
-	# 		sensitive_data_keys: A list of keys used as placeholders for sensitive data
-	# 							 (e.g., ['username_placeholder', 'password_placeholder']).
-	# 							 These will be loaded from environment variables in the
-	# 							 generated script.
-	# 		browser_config: Configuration of the original Browser instance.
-	# 		context_config: Configuration of the original BrowserContext instance.
-	# 	"""
-	# 	from browser_use.agent.playwright_script_generator import PlaywrightScriptGenerator
+	def save_as_playwright_script(
+		self,
+		output_path: str | Path,
+		sensitive_data_keys: list[str] | None = None,
+		browser_profile: BrowserProfile | None = None,
+	) -> None:
+		"""Generate and save a Playwright script representing this history."""
 
-	# 	try:
-	# 		serialized_history = self.model_dump()['history']
-	# 		generator = PlaywrightScriptGenerator(serialized_history, sensitive_data_keys, browser_config, context_config)
+		from browser_use.agent.playwright_script_generator import PlaywrightScriptGenerator
 
-	# 		script_content = generator.generate_script_content()
-	# 		path_obj = Path(output_path)
-	# 		path_obj.parent.mkdir(parents=True, exist_ok=True)
-	# 		with open(path_obj, 'w', encoding='utf-8') as f:
-	# 			f.write(script_content)
-	# 	except Exception as e:
-	# 		raise e
+		serialized_history = self.model_dump()['history']
+		generator = PlaywrightScriptGenerator(
+			serialized_history,
+			sensitive_data_keys,
+			browser_profile,
+			browser_profile,
+		)
+		script_content = generator.generate_script_content()
+		path_obj = Path(output_path)
+		path_obj.parent.mkdir(parents=True, exist_ok=True)
+		with open(path_obj, 'w', encoding='utf-8') as f:
+			f.write(script_content)
 
 	def model_dump(self, **kwargs) -> dict[str, Any]:
 		"""Custom serialization that properly uses AgentHistory's model_dump"""

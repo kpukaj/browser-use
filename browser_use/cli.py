@@ -167,6 +167,11 @@ def update_config_with_click_args(config: dict[str, Any], ctx: click.Context) ->
 	if ctx.params.get('cdp_url'):
 		config['browser']['cdp_url'] = ctx.params['cdp_url']
 
+	if ctx.params.get('record_workflow'):
+		config.setdefault('agent', {})['record_workflow'] = True
+	if ctx.params.get('workflow_path'):
+		config.setdefault('agent', {})['workflow_path'] = ctx.params['workflow_path']
+
 	return config
 
 
@@ -964,6 +969,7 @@ class BrowserUseApp(App):
 		"""Launch the task in a background worker."""
 		# Create or update the agent
 		agent_settings = AgentSettings.model_validate(self.config.get('agent', {}))
+		agent_settings.save_playwright_script_path = self.config.get('agent', {}).get('workflow_path')
 
 		# Get the logger
 		logger = logging.getLogger('browser_use.app')
@@ -984,14 +990,15 @@ class BrowserUseApp(App):
 				llm=self.llm,
 				controller=self.controller,
 				browser_session=self.browser_session,
+				record_workflow=self.config.get('agent', {}).get('record_workflow', False),
 				source='cli',
 				**agent_settings.model_dump(),
 			)
 			# Update our browser_session reference to point to the agent's
 			if hasattr(self.agent, 'browser_session'):
 				self.browser_session = self.agent.browser_session
-		else:
-			self.agent.add_new_task(task)
+			else:
+				self.agent.add_new_task(task)
 
 		# Let the agent run in the background
 		async def agent_task_worker() -> None:
@@ -1175,6 +1182,7 @@ async def run_prompt_mode(prompt: str, ctx: click.Context, debug: bool = False):
 
 		# Get agent settings from config
 		agent_settings = AgentSettings.model_validate(config.get('agent', {}))
+		agent_settings.save_playwright_script_path = config.get('agent', {}).get('workflow_path')
 
 		# Create browser session with config parameters
 		browser_config = config.get('browser', {})
@@ -1185,6 +1193,7 @@ async def run_prompt_mode(prompt: str, ctx: click.Context, debug: bool = False):
 			task=prompt,
 			llm=llm,
 			browser_session=browser_session,
+			record_workflow=config.get('agent', {}).get('record_workflow', False),
 			source='cli',
 			**agent_settings.model_dump(),
 		)
@@ -1323,6 +1332,8 @@ async def textual_interface(config: dict[str, Any]):
 @click.option('--profile-directory', type=str, help='Chrome profile directory name (e.g., "Default", "Profile 1")')
 @click.option('--cdp-url', type=str, help='Connect to existing Chrome via CDP URL (e.g., http://localhost:9222)')
 @click.option('-p', '--prompt', type=str, help='Run a single task without the TUI (headless mode)')
+@click.option('--record-workflow', is_flag=True, help='Record a Playwright script of the workflow')
+@click.option('--workflow-path', type=str, help='Path to save the recorded Playwright script')
 @click.pass_context
 def main(ctx: click.Context, debug: bool = False, **kwargs):
 	"""Browser-Use Interactive TUI or Command Line Executor
