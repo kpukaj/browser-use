@@ -1,0 +1,46 @@
+---
+title: "Record & Replay"
+description: "Capture successful agent runs as Playwright scripts."
+icon: "video"
+---
+
+## Overview
+
+Set `record_workflow=True` (or provide `save_playwright_script_path`) when creating an `Agent` to save a Playwright script of a successful run. The script can be executed later without the LLM.
+
+### Enable Recording
+
+```python
+from browser_use import Agent
+from langchain_openai import ChatOpenAI
+
+agent = Agent(
+    task="Open example.com and finish",
+    llm=ChatOpenAI(model="gpt-4o"),
+    record_workflow=True,  # saves to ./workflow.py by default
+)
+await agent.run()
+```
+
+Specify a custom path:
+
+```python
+agent = Agent(
+    task="Demo",
+    llm=llm,
+    record_workflow="scripts/demo.py",
+)
+```
+
+### Replay
+
+Install Playwright browsers and run the script:
+
+```bash
+playwright install
+python scripts/demo.py
+```
+
+### Security Notes
+
+Recorded scripts may include visited URLs and text content. Placeholders defined via `sensitive_data` are replaced with environment variables in the script. Review and handle recordings carefully before sharing.

@@ -160,12 +160,19 @@ class Agent(Generic[Context]):
 		injected_agent_state: AgentState | None = None,
 		context: Context | None = None,
 		save_playwright_script_path: str | None = None,
+		record_workflow: str | bool | Path = False,
 		enable_memory: bool = True,
 		memory_config: MemoryConfig | None = None,
 		source: str | None = None,
 	):
 		if page_extraction_llm is None:
 			page_extraction_llm = llm
+
+		if record_workflow:
+			if isinstance(record_workflow, (str, Path)):
+				save_playwright_script_path = str(record_workflow)
+			elif save_playwright_script_path is None:
+				save_playwright_script_path = 'workflow.py'
 
 		# Core components
 		self.task = task
